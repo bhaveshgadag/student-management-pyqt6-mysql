@@ -1,9 +1,24 @@
 import sys
-from PyQt6.QtWidgets import QMainWindow, QApplication, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QLineEdit, \
+from PyQt6.QtWidgets import QMainWindow, QApplication, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QLineEdit,\
     QComboBox, QPushButton, QToolBar, QStatusBar, QLabel, QGridLayout, QMessageBox
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtCore import Qt
-import sqlite3
+import mysql.connector
+
+
+class Database:
+    def __init__(self, host='127.0.0.1', user='root', password='root', database='school'):
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
+
+    def connect(self):
+        connection = mysql.connector.connect(host=self.host,
+                                             user=self.user,
+                                             password=self.password,
+                                             database=self.database)
+        return connection
 
 
 class MainWindow(QMainWindow):
@@ -67,7 +82,7 @@ class MainWindow(QMainWindow):
 
     # Function to load student records in main table
     def load_data(self):
-        connection = sqlite3.connect("database.db")
+        connection = Database().connect()
         cursor = connection.cursor()
         cursor.execute("Select * from students")
         data = cursor.fetchall()
@@ -143,9 +158,9 @@ class InsertDialog(QDialog):
         course = self.course_cb.itemText(self.course_cb.currentIndex())
         mobile = self.mobile.text()
 
-        connection = sqlite3.connect("database.db")
+        connection = Database().connect()
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO students (name, course, mobile) VALUES (?, ? , ?)",
+        cursor.execute("INSERT INTO students (name, course, mobile) VALUES (%s, %s , %s)",
                        (student, course, mobile))
         connection.commit()
         cursor.close()
@@ -179,11 +194,9 @@ class SearchDialog(QDialog):
     def search(self):
         name = self.name.text()
 
-        connection = sqlite3.connect("database.db")
+        connection = Database().connect()
         cursor = connection.cursor()
-        result = cursor.execute("SELECT id FROM students WHERE name = ?", (name,))
-        print(result)
-        print(result.fetchall())
+        result = cursor.execute("SELECT id FROM students WHERE name = %s", (name,))
         # result = list(result)
         items = main_win.table.findItems(name, Qt.MatchFlag.MatchFixedString)
         for item in items:
@@ -237,9 +250,9 @@ class EditDialog(QDialog):
         index = main_win.table.currentRow()
         s_id = main_win.table.item(index, 0).text()
 
-        connection = sqlite3.connect("database.db")
+        connection = Database().connect()
         cursor = connection.cursor()
-        cursor.execute("UPDATE students SET name=?, course=?, mobile=? WHERE id=?",
+        cursor.execute("UPDATE students SET name=%s, course=%s, mobile=%s WHERE id=%s",
                        (student, course, mobile, s_id))
         connection.commit()
         cursor.close()
@@ -271,9 +284,9 @@ class DeleteDialog(QDialog):
         index = main_win.table.currentRow()
         s_id = main_win.table.item(index, 0).text()
 
-        connection = sqlite3.connect("database.db")
+        connection = Database().connect()
         cursor = connection.cursor()
-        cursor.execute("DELETE FROM students where id=?", (s_id,))
+        cursor.execute("DELETE FROM students where id=%s", (s_id,))
         connection.commit()
         cursor.close()
         connection.close()
@@ -289,7 +302,7 @@ class AboutDialog(QMessageBox):
         content = '''
         Student Management System
         Created by Bhavesh
-
+        
         This is a simple student management application 
         developed using Python, PyQt6 for GUI and 
         sqlite3 for storing records.
